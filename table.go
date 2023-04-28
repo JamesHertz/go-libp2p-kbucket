@@ -28,8 +28,9 @@ type RoutingTable struct {
 	// function to cancel the RT context
 	ctxCancel context.CancelFunc
 
-	// ID of the local peer
+	// TODO: refactor this everywhere :)
 	local ID
+	features peer.FeatureList
 
 	// Blanket lock, refine later for better performance
 	tabLock sync.RWMutex
@@ -139,9 +140,14 @@ func (rt *RoutingTable) TryAddPeer(p peer.ID, queryPeer bool, isReplaceable bool
 	return rt.addPeer(p, queryPeer, isReplaceable)
 }
 
+// TODO: Look at this more carefully
 // locking is the responsibility of the caller
 func (rt *RoutingTable) addPeer(p peer.ID, queryPeer bool, isReplaceable bool) (bool, error) {
-	bucketID := rt.bucketIdForPeer(p)
+	// peerInfo := BareInfo{Id: p}
+
+	// returns the index of the bucket in the bucket list. The 
+	// index is the number of leadings zero's of the XOR(sha256(p), localID))
+	bucketID := rt.bucketIdForPeer(p) 
 	bucket := rt.buckets[bucketID]
 
 	now := time.Now()
@@ -178,6 +184,7 @@ func (rt *RoutingTable) addPeer(p peer.ID, queryPeer bool, isReplaceable bool) (
 	// We have enough space in the bucket (whether spawned or grouped).
 	if bucket.len() < rt.bucketsize {
 		bucket.pushFront(&PeerInfo{
+			//BareInfo: peerInfo,
 			Id:                            p,
 			LastUsefulAt:                  lastUsefulAt,
 			LastSuccessfulOutboundQueryAt: now,
@@ -199,7 +206,8 @@ func (rt *RoutingTable) addPeer(p peer.ID, queryPeer bool, isReplaceable bool) (
 		// push the peer only if the bucket isn't overflowing after slitting
 		if bucket.len() < rt.bucketsize {
 			bucket.pushFront(&PeerInfo{
-				Id:                            p,
+				//BareInfo: peerInfo,
+			    Id:                            p,
 				LastUsefulAt:                  lastUsefulAt,
 				LastSuccessfulOutboundQueryAt: now,
 				AddedAt:                       now,
@@ -213,16 +221,20 @@ func (rt *RoutingTable) addPeer(p peer.ID, queryPeer bool, isReplaceable bool) (
 
 	// the bucket to which the peer belongs is full. Let's try to find a peer
 	// in that bucket which is replaceable.
-	// we don't really need a stable sort here as it dosen't matter which peer we evict
+	// we don't really need a stable sort here as it doesn't matter which peer we evict
 	// as long as it's a replaceable peer.
-	replaceablePeer := bucket.min(func(p1 *PeerInfo, p2 *PeerInfo) bool {
-		return p1.replaceable
+	replaceablePeer := bucket.min(func(p1 *PeerInfo, p2 *PeerInfo) bool { // what does this really mean?
+		// prefer those that are replaceable, but when there are none
+		// the the one with the lowest featuresScore
+		return p1.replaceable || !p2.replaceable && rt.rtScore(p1.Features) < rt.rtScore(p2.Features)
 	})
 
+	fmt.Println("repaceable: ", replaceablePeer.replaceable)
 	if replaceablePeer != nil && replaceablePeer.replaceable {
 		// let's evict it and add the new peer
 		if rt.removePeer(replaceablePeer.Id) {
 			bucket.pushFront(&PeerInfo{
+				//BareInfo:                      peerInfo,
 				Id:                            p,
 				LastUsefulAt:                  lastUsefulAt,
 				LastSuccessfulOutboundQueryAt: now,
@@ -493,7 +505,7 @@ func (rt *RoutingTable) GetDiversityStats() []peerdiversity.CplDiversityStats {
 // the caller is responsible for the locking
 func (rt *RoutingTable) bucketIdForPeer(p peer.ID) int {
 	peerID := ConvertPeerID(p)
-	cpl := CommonPrefixLen(peerID, rt.local)
+	cpl := CommonPrefixLen(peerID, rt.local) // returns number of leading zeros of the Xor of both IDs
 	bucketID := cpl
 	if bucketID >= len(rt.buckets) {
 		bucketID = len(rt.buckets) - 1
@@ -513,4 +525,8 @@ func (rt *RoutingTable) maxCommonPrefix() uint {
 		}
 	}
 	return 0
+}
+
+func (rt * RoutingTable) rtScore(features peer.FeatureList) int {
+	return rt.features.FeaturesScore(features)
 }

@@ -9,9 +9,19 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
+// type BareInfo struct {
+// 	Id peer.ID
+// 	// features list 
+// 	Features peer.FeatureList
+// }
+
 // PeerInfo holds all related information for a peer in the K-Bucket.
 type PeerInfo struct {
+	//BareInfo
 	Id peer.ID
+
+	// features list 
+	Features peer.FeatureList
 
 	// LastUsefulAt is the time instant at which the peer was last "useful" to us.
 	// Please see the DHT docs for the definition of usefulness.

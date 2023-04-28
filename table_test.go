@@ -37,7 +37,9 @@ func TestBucket(t *testing.T) {
 	peers := make([]peer.ID, 100)
 	for i := 0; i < 100; i++ {
 		peers[i] = test.RandPeerIDFatal(t)
+		//bareInfo := BareInfo{Id: peers[i]}
 		b.pushFront(&PeerInfo{
+			//BareInfo: bareInfo,
 			Id:                            peers[i],
 			LastUsefulAt:                  testTime1,
 			LastSuccessfulOutboundQueryAt: testTime2,
@@ -766,4 +768,25 @@ func BenchmarkFinds(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		tab.Find(peers[i])
 	}
+}
+
+// to verify that it prefers longlived nodes
+func TestThisThingIsRight(t * testing.T){
+	localID := test.RandPeerIDFatal(t)
+	rt, err := NewRoutingTable(1, ConvertPeerID(localID), time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
+	require.NoError(t, err)
+
+	p1, _ := rt.GenRandPeerID(1)
+	p2, _ := rt.GenRandPeerID(1)
+
+	rt.TryAddPeer(p1, true, false)
+	rt.TryAddPeer(p2, true, false)
+
+	require.True(t, len(rt.buckets) > 0)
+	require.Equal(t, rt.Find(p1), p1)
+	require.Equal(t, rt.Find(p2), peer.ID(""))
+}
+
+func TestNewPolicy(t * testing.T){
+	// TODO
 }

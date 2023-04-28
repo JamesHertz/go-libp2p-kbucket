@@ -20,18 +20,21 @@ func TestBucketMinimum(t *testing.T) {
 	pid3 := test.RandPeerIDFatal(t)
 
 	// first is min
+	//b.pushFront(&PeerInfo{BareInfo: emptyBareInfo(pid1), LastUsefulAt: time.Now()})
 	b.pushFront(&PeerInfo{Id: pid1, LastUsefulAt: time.Now()})
 	require.Equal(t, pid1, b.min(func(first *PeerInfo, second *PeerInfo) bool {
 		return first.LastUsefulAt.Before(second.LastUsefulAt)
 	}).Id)
 
 	// first is still min
+	//b.pushFront(&PeerInfo{BareInfo: emptyBareInfo(pid2), LastUsefulAt: time.Now().AddDate(1, 0, 0)})
 	b.pushFront(&PeerInfo{Id: pid2, LastUsefulAt: time.Now().AddDate(1, 0, 0)})
 	require.Equal(t, pid1, b.min(func(first *PeerInfo, second *PeerInfo) bool {
 		return first.LastUsefulAt.Before(second.LastUsefulAt)
 	}).Id)
 
 	// second is the min
+	//b.pushFront(&PeerInfo{BareInfo: emptyBareInfo(pid3), LastUsefulAt: time.Now().AddDate(-1, 0, 0)})
 	b.pushFront(&PeerInfo{Id: pid3, LastUsefulAt: time.Now().AddDate(-1, 0, 0)})
 	require.Equal(t, pid3, b.min(func(first *PeerInfo, second *PeerInfo) bool {
 		return first.LastUsefulAt.Before(second.LastUsefulAt)
@@ -50,6 +53,7 @@ func TestUpdateAllWith(t *testing.T) {
 	pid3 := test.RandPeerIDFatal(t)
 
 	// peer1
+	//b.pushFront(&PeerInfo{BareInfo: emptyBareInfo(pid1), replaceable: false})
 	b.pushFront(&PeerInfo{Id: pid1, replaceable: false})
 	b.updateAllWith(func(p *PeerInfo) {
 		p.replaceable = true
@@ -57,6 +61,7 @@ func TestUpdateAllWith(t *testing.T) {
 	require.True(t, b.getPeer(pid1).replaceable)
 
 	// peer2
+	//b.pushFront(&PeerInfo{BareInfo: emptyBareInfo(pid2), replaceable: false})
 	b.pushFront(&PeerInfo{Id: pid2, replaceable: false})
 	b.updateAllWith(func(p *PeerInfo) {
 		if p.Id == pid1 {
@@ -70,6 +75,7 @@ func TestUpdateAllWith(t *testing.T) {
 
 	// peer3
 	b.pushFront(&PeerInfo{Id: pid3, replaceable: false})
+	//b.pushFront(&PeerInfo{BareInfo: emptyBareInfo(pid3), replaceable: false})
 	require.False(t, b.getPeer(pid3).replaceable)
 	b.updateAllWith(func(p *PeerInfo) {
 		p.replaceable = true
@@ -78,3 +84,11 @@ func TestUpdateAllWith(t *testing.T) {
 	require.True(t, b.getPeer(pid2).replaceable)
 	require.True(t, b.getPeer(pid3).replaceable)
 }
+
+/*
+func emptyBareInfo(id peer.ID) BareInfo{
+	return BareInfo{
+		Id: id,
+	}
+}
+*/
