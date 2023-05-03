@@ -3,9 +3,12 @@ package kbucket
 import (
 	"testing"
 
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/test"
 	"github.com/stretchr/testify/require"
 )
+
+var emptyFeatureList = peer.FeatureList{}
 
 func TestCloser(t *testing.T) {
 	Pa := test.RandPeerIDFatal(t)

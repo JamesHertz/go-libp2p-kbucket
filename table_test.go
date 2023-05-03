@@ -21,7 +21,7 @@ func TestPrint(t *testing.T) {
 	t.Parallel()
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(1, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(1, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 	rt.Print()
 }
@@ -39,8 +39,8 @@ func TestBucket(t *testing.T) {
 		peers[i] = test.RandPeerIDFatal(t)
 		//bareInfo := BareInfo{Id: peers[i]}
 		b.pushFront(&PeerInfo{
-			//BareInfo: bareInfo,
 			Id:                            peers[i],
+			Features:                      emptyFeatureList,
 			LastUsefulAt:                  testTime1,
 			LastSuccessfulOutboundQueryAt: testTime2,
 			AddedAt:                       testTime1,
@@ -96,7 +96,7 @@ func TestNPeersForCpl(t *testing.T) {
 	t.Parallel()
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(2, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(2, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	require.Equal(t, 0, rt.NPeersForCpl(0))
@@ -104,27 +104,27 @@ func TestNPeersForCpl(t *testing.T) {
 
 	// one peer with cpl 1
 	p, _ := rt.GenRandPeerID(1)
-	rt.TryAddPeer(p, true, false)
+	rt.TryAddPeer(p, emptyFeatureList, true, false)
 	require.Equal(t, 0, rt.NPeersForCpl(0))
 	require.Equal(t, 1, rt.NPeersForCpl(1))
 	require.Equal(t, 0, rt.NPeersForCpl(2))
 
 	// one peer with cpl 0
 	p, _ = rt.GenRandPeerID(0)
-	rt.TryAddPeer(p, true, false)
+	rt.TryAddPeer(p, emptyFeatureList, true, false)
 	require.Equal(t, 1, rt.NPeersForCpl(0))
 	require.Equal(t, 1, rt.NPeersForCpl(1))
 	require.Equal(t, 0, rt.NPeersForCpl(2))
 
 	// split the bucket with a peer with cpl 1
 	p, _ = rt.GenRandPeerID(1)
-	rt.TryAddPeer(p, true, false)
+	rt.TryAddPeer(p, emptyFeatureList, true, false)
 	require.Equal(t, 1, rt.NPeersForCpl(0))
 	require.Equal(t, 2, rt.NPeersForCpl(1))
 	require.Equal(t, 0, rt.NPeersForCpl(2))
 
 	p, _ = rt.GenRandPeerID(0)
-	rt.TryAddPeer(p, true, false)
+	rt.TryAddPeer(p, emptyFeatureList, true, false)
 	require.Equal(t, 2, rt.NPeersForCpl(0))
 }
 
@@ -133,7 +133,7 @@ func TestEmptyBucketCollapse(t *testing.T) {
 	local := test.RandPeerIDFatal(t)
 
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(1, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(1, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	// generate peers with cpl 0,1,2 & 3
@@ -146,7 +146,7 @@ func TestEmptyBucketCollapse(t *testing.T) {
 	rt.RemovePeer(p1)
 
 	// add peer with cpl 0 and remove it..bucket should still exist as it's the ONLY bucket we have
-	b, err := rt.TryAddPeer(p1, true, false)
+	b, err := rt.TryAddPeer(p1, emptyFeatureList, true, false)
 	require.True(t, b)
 	require.NoError(t, err)
 	rt.RemovePeer(p1)
@@ -156,10 +156,10 @@ func TestEmptyBucketCollapse(t *testing.T) {
 	require.Empty(t, rt.ListPeers())
 
 	// add peer with cpl 0 and cpl 1 and verify we have two buckets.
-	b, err = rt.TryAddPeer(p1, true, false)
+	b, err = rt.TryAddPeer(p1, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
-	b, err = rt.TryAddPeer(p2, true, false)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
 	rt.tabLock.Lock()
@@ -175,7 +175,7 @@ func TestEmptyBucketCollapse(t *testing.T) {
 	require.Contains(t, rt.ListPeers(), p1)
 
 	// add p2 again
-	b, err = rt.TryAddPeer(p2, true, false)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, false)
 	require.True(t, b)
 	require.NoError(t, err)
 	rt.tabLock.Lock()
@@ -191,10 +191,10 @@ func TestEmptyBucketCollapse(t *testing.T) {
 	require.Contains(t, rt.ListPeers(), p2)
 
 	// let's have a total of 4 buckets now
-	rt.TryAddPeer(p1, true, false)
-	rt.TryAddPeer(p2, true, false)
-	rt.TryAddPeer(p3, true, false)
-	rt.TryAddPeer(p4, true, false)
+	rt.TryAddPeer(p1, emptyFeatureList, true, false)
+	rt.TryAddPeer(p2, emptyFeatureList, true, false)
+	rt.TryAddPeer(p3, emptyFeatureList, true, false)
+	rt.TryAddPeer(p4, emptyFeatureList, true, false)
 
 	rt.tabLock.Lock()
 	require.Len(t, rt.buckets, 4)
@@ -209,10 +209,10 @@ func TestEmptyBucketCollapse(t *testing.T) {
 	rt.tabLock.Unlock()
 
 	// an empty bucket in the middle DOES NOT collapse buckets
-	rt.TryAddPeer(p1, true, false)
-	rt.TryAddPeer(p2, true, false)
-	rt.TryAddPeer(p3, true, false)
-	rt.TryAddPeer(p4, true, false)
+	rt.TryAddPeer(p1, emptyFeatureList, true, false)
+	rt.TryAddPeer(p2, emptyFeatureList, true, false)
+	rt.TryAddPeer(p3, emptyFeatureList, true, false)
+	rt.TryAddPeer(p4, emptyFeatureList, true, false)
 
 	rt.tabLock.Lock()
 	require.Len(t, rt.buckets, 4)
@@ -230,15 +230,15 @@ func TestRemovePeer(t *testing.T) {
 	local := test.RandPeerIDFatal(t)
 
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(2, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(2, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	p1, _ := rt.GenRandPeerID(0)
 	p2, _ := rt.GenRandPeerID(0)
-	b, err := rt.TryAddPeer(p1, true, false)
+	b, err := rt.TryAddPeer(p1, emptyFeatureList, true, false)
 	require.True(t, b)
 	require.NoError(t, err)
-	b, err = rt.TryAddPeer(p2, true, false)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, false)
 	require.True(t, b)
 	require.NoError(t, err)
 
@@ -259,7 +259,7 @@ func TestTableCallbacks(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(10, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(10, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	peers := make([]peer.ID, 100)
@@ -275,7 +275,7 @@ func TestTableCallbacks(t *testing.T) {
 		delete(pset, p)
 	}
 
-	rt.TryAddPeer(peers[0], true, false)
+	rt.TryAddPeer(peers[0], emptyFeatureList, true, false)
 	if _, ok := pset[peers[0]]; !ok {
 		t.Fatal("should have this peer")
 	}
@@ -286,7 +286,7 @@ func TestTableCallbacks(t *testing.T) {
 	}
 
 	for _, p := range peers {
-		rt.TryAddPeer(p, true, false)
+		rt.TryAddPeer(p, emptyFeatureList, true, false)
 	}
 
 	out := rt.ListPeers()
@@ -308,7 +308,7 @@ func TestTryAddPeerLoad(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(10, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(10, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	peers := make([]peer.ID, 100)
@@ -317,7 +317,7 @@ func TestTryAddPeerLoad(t *testing.T) {
 	}
 
 	for i := 0; i < 10000; i++ {
-		rt.TryAddPeer(peers[rand.Intn(len(peers))], true, false)
+		rt.TryAddPeer(peers[rand.Intn(len(peers))], emptyFeatureList, true, false)
 	}
 
 	for i := 0; i < 100; i++ {
@@ -334,13 +334,13 @@ func TestTableFind(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(10, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(10, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	peers := make([]peer.ID, 100)
 	for i := 0; i < 5; i++ {
 		peers[i] = test.RandPeerIDFatal(t)
-		rt.TryAddPeer(peers[i], true, false)
+		rt.TryAddPeer(peers[i], emptyFeatureList, true, false)
 	}
 
 	t.Logf("Searching for peer: '%s'", peers[2])
@@ -353,11 +353,11 @@ func TestTableFind(t *testing.T) {
 func TestUpdateLastSuccessfulOutboundQueryAt(t *testing.T) {
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(10, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(10, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	p := test.RandPeerIDFatal(t)
-	b, err := rt.TryAddPeer(p, true, false)
+	b, err := rt.TryAddPeer(p, emptyFeatureList, true, false)
 	require.True(t, b)
 	require.NoError(t, err)
 
@@ -374,11 +374,11 @@ func TestUpdateLastSuccessfulOutboundQueryAt(t *testing.T) {
 func TestUpdateLastUsefulAt(t *testing.T) {
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(10, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(10, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	p := test.RandPeerIDFatal(t)
-	b, err := rt.TryAddPeer(p, true, false)
+	b, err := rt.TryAddPeer(p, emptyFeatureList, true, false)
 	require.True(t, b)
 	require.NoError(t, err)
 
@@ -397,16 +397,16 @@ func TestTryAddPeer(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(2, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(2, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	// generate 2 peers to saturate the first bucket for cpl=0
 	p1, _ := rt.GenRandPeerID(0)
-	b, err := rt.TryAddPeer(p1, true, false)
+	b, err := rt.TryAddPeer(p1, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
 	p2, _ := rt.GenRandPeerID(0)
-	b, err = rt.TryAddPeer(p2, true, true)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, true)
 	require.NoError(t, err)
 	require.True(t, b)
 	require.Equal(t, p1, rt.Find(p1))
@@ -414,7 +414,7 @@ func TestTryAddPeer(t *testing.T) {
 
 	// trying to add a peer with cpl=0 works as p2 is replacable
 	p3, _ := rt.GenRandPeerID(0)
-	b, err = rt.TryAddPeer(p3, true, false)
+	b, err = rt.TryAddPeer(p3, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
 	require.Equal(t, p3, rt.Find(p3))
@@ -424,13 +424,13 @@ func TestTryAddPeer(t *testing.T) {
 	// however adding peer fails as there are no more replacable peers.
 	p5, err := rt.GenRandPeerID(0)
 	require.NoError(t, err)
-	b, err = rt.TryAddPeer(p5, true, false)
+	b, err = rt.TryAddPeer(p5, emptyFeatureList, true, false)
 	require.Error(t, err)
 	require.False(t, b)
 
 	// however, trying to add peer with cpl=1 works
 	p4, _ := rt.GenRandPeerID(1)
-	b, err = rt.TryAddPeer(p4, true, false)
+	b, err = rt.TryAddPeer(p4, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
 	require.Equal(t, p4, rt.Find(p4))
@@ -438,7 +438,7 @@ func TestTryAddPeer(t *testing.T) {
 	// adding non query peer
 	p6, err := rt.GenRandPeerID(3)
 	require.NoError(t, err)
-	b, err = rt.TryAddPeer(p6, false, false)
+	b, err = rt.TryAddPeer(p6, emptyFeatureList, false, false)
 	require.NoError(t, err)
 	require.True(t, b)
 	rt.tabLock.Lock()
@@ -454,16 +454,16 @@ func TestMarkAllPeersIrreplaceable(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(2, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(2, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	// generate 2 peers
 	p1, _ := rt.GenRandPeerID(0)
-	b, err := rt.TryAddPeer(p1, true, true)
+	b, err := rt.TryAddPeer(p1, emptyFeatureList, true, true)
 	require.NoError(t, err)
 	require.True(t, b)
 	p2, _ := rt.GenRandPeerID(0)
-	b, err = rt.TryAddPeer(p2, true, true)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, true)
 	require.NoError(t, err)
 	require.True(t, b)
 	require.Equal(t, p1, rt.Find(p1))
@@ -482,13 +482,13 @@ func TestTableFindMultiple(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(20, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(20, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	peers := make([]peer.ID, 100)
 	for i := 0; i < 18; i++ {
 		peers[i] = test.RandPeerIDFatal(t)
-		rt.TryAddPeer(peers[i], true, false)
+		rt.TryAddPeer(peers[i], emptyFeatureList, true, false)
 	}
 
 	t.Logf("Searching for peer: '%s'", peers[2])
@@ -504,13 +504,13 @@ func TestTableFindMultipleBuckets(t *testing.T) {
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
 
-	rt, err := NewRoutingTable(5, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(5, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	peers := make([]peer.ID, 100)
 	for i := 0; i < 100; i++ {
 		peers[i] = test.RandPeerIDFatal(t)
-		rt.TryAddPeer(peers[i], true, false)
+		rt.TryAddPeer(peers[i], emptyFeatureList, true, false)
 	}
 
 	closest := SortClosestPeers(rt.ListPeers(), ConvertPeerID(peers[2]))
@@ -550,7 +550,7 @@ func TestTableMultithreaded(t *testing.T) {
 
 	local := peer.ID("localPeer")
 	m := pstore.NewMetrics()
-	tab, err := NewRoutingTable(20, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	tab, err := NewRoutingTable(20, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 	var peers []peer.ID
 	for i := 0; i < 500; i++ {
@@ -561,7 +561,7 @@ func TestTableMultithreaded(t *testing.T) {
 	go func() {
 		for i := 0; i < 1000; i++ {
 			n := rand.Intn(len(peers))
-			tab.TryAddPeer(peers[n], true, false)
+			tab.TryAddPeer(peers[n], emptyFeatureList, true, false)
 		}
 		done <- struct{}{}
 	}()
@@ -569,7 +569,7 @@ func TestTableMultithreaded(t *testing.T) {
 	go func() {
 		for i := 0; i < 1000; i++ {
 			n := rand.Intn(len(peers))
-			tab.TryAddPeer(peers[n], true, false)
+			tab.TryAddPeer(peers[n], emptyFeatureList, true, false)
 		}
 		done <- struct{}{}
 	}()
@@ -638,20 +638,20 @@ func TestDiversityFiltering(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	rt, err := NewRoutingTable(10, ConvertPeerID(local), time.Hour, pstore.NewMetrics(), NoOpThreshold, df)
+	rt, err := NewRoutingTable(10, ConvertPeerID(local), emptyFeatureList, time.Hour, pstore.NewMetrics(), NoOpThreshold, df)
 	require.NoError(t, err)
 	p, _ := rt.GenRandPeerID(2)
-	b, err := rt.TryAddPeer(p, true, false)
+	b, err := rt.TryAddPeer(p, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
 
 	p2, _ := rt.GenRandPeerID(2)
-	b, err = rt.TryAddPeer(p2, true, false)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, false)
 	require.Error(t, err)
 	require.False(t, b)
 
 	rt.RemovePeer(p)
-	b, err = rt.TryAddPeer(p2, true, false)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
 }
@@ -659,7 +659,7 @@ func TestDiversityFiltering(t *testing.T) {
 func TestGetPeerInfos(t *testing.T) {
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(10, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(10, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	require.Empty(t, rt.GetPeerInfos())
@@ -667,10 +667,10 @@ func TestGetPeerInfos(t *testing.T) {
 	p1 := test.RandPeerIDFatal(t)
 	p2 := test.RandPeerIDFatal(t)
 
-	b, err := rt.TryAddPeer(p1, false, false)
+	b, err := rt.TryAddPeer(p1, emptyFeatureList, false, false)
 	require.True(t, b)
 	require.NoError(t, err)
-	b, err = rt.TryAddPeer(p2, true, false)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, false)
 	require.True(t, b)
 	require.NoError(t, err)
 
@@ -692,7 +692,7 @@ func TestPeerRemovedNotificationWhenPeerIsEvicted(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(1, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
+	rt, err := NewRoutingTable(1, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 	pset := make(map[peer.ID]struct{})
 	rt.PeerAdded = func(p peer.ID) {
@@ -706,12 +706,12 @@ func TestPeerRemovedNotificationWhenPeerIsEvicted(t *testing.T) {
 	p2, _ := rt.GenRandPeerID(0)
 
 	// first peer works
-	b, err := rt.TryAddPeer(p1, true, false)
+	b, err := rt.TryAddPeer(p1, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
 
 	// second is rejected because of capacity
-	b, err = rt.TryAddPeer(p2, true, false)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, false)
 	require.False(t, b)
 	require.Error(t, err)
 
@@ -726,7 +726,7 @@ func TestPeerRemovedNotificationWhenPeerIsEvicted(t *testing.T) {
 	rt.tabLock.Unlock()
 	bucket.getPeer(p1).replaceable = true
 
-	b, err = rt.TryAddPeer(p2, true, false)
+	b, err = rt.TryAddPeer(p2, emptyFeatureList, true, false)
 	require.NoError(t, err)
 	require.True(t, b)
 	require.Contains(t, pset, p2)
@@ -737,7 +737,7 @@ func BenchmarkAddPeer(b *testing.B) {
 	b.StopTimer()
 	local := ConvertKey("localKey")
 	m := pstore.NewMetrics()
-	tab, err := NewRoutingTable(20, local, time.Hour, m, NoOpThreshold, nil)
+	tab, err := NewRoutingTable(20, local, emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(b, err)
 
 	var peers []peer.ID
@@ -747,7 +747,7 @@ func BenchmarkAddPeer(b *testing.B) {
 
 	b.StartTimer()
 	for i := 0; i < b.N; i++ {
-		tab.TryAddPeer(peers[i], true, false)
+		tab.TryAddPeer(peers[i], emptyFeatureList, true, false)
 	}
 }
 
@@ -755,13 +755,13 @@ func BenchmarkFinds(b *testing.B) {
 	b.StopTimer()
 	local := ConvertKey("localKey")
 	m := pstore.NewMetrics()
-	tab, err := NewRoutingTable(20, local, time.Hour, m, NoOpThreshold, nil)
+	tab, err := NewRoutingTable(20, local, emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
 	require.NoError(b, err)
 
 	var peers []peer.ID
 	for i := 0; i < b.N; i++ {
 		peers = append(peers, test.RandPeerIDFatal(b))
-		tab.TryAddPeer(peers[i], true, false)
+		tab.TryAddPeer(peers[i], emptyFeatureList, true, false)
 	}
 
 	b.StartTimer()
@@ -773,14 +773,14 @@ func BenchmarkFinds(b *testing.B) {
 // to verify that it prefers longlived nodes
 func TestThisThingIsRight(t * testing.T){
 	localID := test.RandPeerIDFatal(t)
-	rt, err := NewRoutingTable(1, ConvertPeerID(localID), time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
+	rt, err := NewRoutingTable(1, ConvertPeerID(localID), emptyFeatureList, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	p1, _ := rt.GenRandPeerID(1)
 	p2, _ := rt.GenRandPeerID(1)
 
-	rt.TryAddPeer(p1, true, false)
-	rt.TryAddPeer(p2, true, false)
+	rt.TryAddPeer(p1, emptyFeatureList, true, false)
+	rt.TryAddPeer(p2, emptyFeatureList, true, false)
 
 	require.True(t, len(rt.buckets) > 0)
 	require.Equal(t, rt.Find(p1), p1)

@@ -61,12 +61,13 @@ type RoutingTable struct {
 }
 
 // NewRoutingTable creates a new routing table with a given bucketsize, local ID, and latency tolerance.
-func NewRoutingTable(bucketsize int, localID ID, latency time.Duration, m peerstore.Metrics, usefulnessGracePeriod time.Duration,
+func NewRoutingTable(bucketsize int, localID ID, features peer.FeatureList, latency time.Duration, m peerstore.Metrics, usefulnessGracePeriod time.Duration,
 	df *peerdiversity.Filter) (*RoutingTable, error) {
 	rt := &RoutingTable{
 		buckets:    []*bucket{newBucket()},
 		bucketsize: bucketsize,
 		local:      localID,
+		features:   features, // features list
 
 		maxLatency: latency,
 		metrics:    m,
@@ -113,6 +114,12 @@ func (rt *RoutingTable) NPeersForCpl(cpl uint) int {
 	}
 }
 
+// given two festures list fst and snd returns true if the 
+// list fst compared with the routing table one has higher score than snd.
+func (rt * RoutingTable) closerThan(fst peer.FeatureList, snd peer.FeatureList) bool{
+	return fst.FeaturesScore(rt.features) > snd.FeaturesScore(rt.features)
+}
+
 // TryAddPeer tries to add a peer to the Routing table.
 // If the peer ALREADY exists in the Routing Table and has been queried before, this call is a no-op.
 // If the peer ALREADY exists in the Routing Table but hasn't been queried before, we set it's LastUsefulAt value to
@@ -133,17 +140,16 @@ func (rt *RoutingTable) NPeersForCpl(cpl uint) int {
 // the boolean value will ALWAYS be false i.e. the peer wont be added to the Routing Table it it's not already there.
 //
 // A return value of false with error=nil indicates that the peer ALREADY exists in the Routing Table.
-func (rt *RoutingTable) TryAddPeer(p peer.ID, queryPeer bool, isReplaceable bool) (bool, error) {
+func (rt *RoutingTable) TryAddPeer(p peer.ID, features peer.FeatureList,queryPeer bool, isReplaceable bool) (bool, error) {
 	rt.tabLock.Lock()
 	defer rt.tabLock.Unlock()
 
-	return rt.addPeer(p, queryPeer, isReplaceable)
+	return rt.addPeer(p, features, queryPeer, isReplaceable)
 }
 
 // TODO: Look at this more carefully
 // locking is the responsibility of the caller
-func (rt *RoutingTable) addPeer(p peer.ID, queryPeer bool, isReplaceable bool) (bool, error) {
-	// peerInfo := BareInfo{Id: p}
+func (rt *RoutingTable) addPeer(p peer.ID, features peer.FeatureList ,queryPeer bool, isReplaceable bool) (bool, error) {
 
 	// returns the index of the bucket in the bucket list. The 
 	// index is the number of leadings zero's of the XOR(sha256(p), localID))
@@ -184,8 +190,8 @@ func (rt *RoutingTable) addPeer(p peer.ID, queryPeer bool, isReplaceable bool) (
 	// We have enough space in the bucket (whether spawned or grouped).
 	if bucket.len() < rt.bucketsize {
 		bucket.pushFront(&PeerInfo{
-			//BareInfo: peerInfo,
 			Id:                            p,
+			Features:                      features,
 			LastUsefulAt:                  lastUsefulAt,
 			LastSuccessfulOutboundQueryAt: now,
 			AddedAt:                       now,
@@ -201,13 +207,13 @@ func (rt *RoutingTable) addPeer(p peer.ID, queryPeer bool, isReplaceable bool) (
 		rt.nextBucket()
 		// the structure of the table has changed, so let's recheck if the peer now has a dedicated bucket.
 		bucketID = rt.bucketIdForPeer(p)
-		bucket = rt.buckets[bucketID]
+		bucket   = rt.buckets[bucketID]
 
 		// push the peer only if the bucket isn't overflowing after slitting
 		if bucket.len() < rt.bucketsize {
 			bucket.pushFront(&PeerInfo{
-				//BareInfo: peerInfo,
 			    Id:                            p,
+				Features:                      features,
 				LastUsefulAt:                  lastUsefulAt,
 				LastSuccessfulOutboundQueryAt: now,
 				AddedAt:                       now,
@@ -229,13 +235,14 @@ func (rt *RoutingTable) addPeer(p peer.ID, queryPeer bool, isReplaceable bool) (
 		return p1.replaceable || !p2.replaceable && rt.rtScore(p1.Features) < rt.rtScore(p2.Features)
 	})
 
-	fmt.Println("repaceable: ", replaceablePeer.replaceable)
-	if replaceablePeer != nil && replaceablePeer.replaceable {
+	// fmt.Println("repaceable: ", replaceablePeer.replaceable)
+	if replaceablePeer != nil && ( replaceablePeer.replaceable  ||
+		rt.closerThan(features, replaceablePeer.Features)){
 		// let's evict it and add the new peer
 		if rt.removePeer(replaceablePeer.Id) {
 			bucket.pushFront(&PeerInfo{
-				//BareInfo:                      peerInfo,
 				Id:                            p,
+				Features:                      features,
 				LastUsefulAt:                  lastUsefulAt,
 				LastSuccessfulOutboundQueryAt: now,
 				AddedAt:                       now,
