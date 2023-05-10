@@ -17,7 +17,7 @@ func TestGenRandPeerID(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(1, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
+	rt, err := newEmptyFeaturesRT(1, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	// generate above maxCplForRefresh fails
@@ -43,7 +43,7 @@ func TestGenRandomKey(t *testing.T) {
 		// generate routing table with random local peer ID
 		local := test.RandPeerIDFatal(t)
 		m := pstore.NewMetrics()
-		rt, err := NewRoutingTable(1, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
+		rt, err := newEmptyFeaturesRT(1, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
 		require.NoError(t, err)
 
 		// GenRandomKey fails for cpl >= 256
@@ -125,7 +125,7 @@ func TestRefreshAndGetTrackedCpls(t *testing.T) {
 
 	local := test.RandPeerIDFatal(t)
 	m := pstore.NewMetrics()
-	rt, err := NewRoutingTable(2, ConvertPeerID(local), emptyFeatureList, time.Hour, m, NoOpThreshold, nil)
+	rt, err := newEmptyFeaturesRT(2, ConvertPeerID(local), time.Hour, m, NoOpThreshold, nil)
 	require.NoError(t, err)
 
 	// fetch cpl's
@@ -142,7 +142,7 @@ func TestRefreshAndGetTrackedCpls(t *testing.T) {
 
 	// add peer IDs.
 	for i, id := range peerIDs {
-		added, err := rt.TryAddPeer(id, emptyFeatureList, true, false)
+		added, err := rt.TryAddUnknownPeer(id, true, false)
 		require.NoError(t, err)
 		require.True(t, added)
 		require.Len(t, rt.GetTrackedCplsForRefresh(), minCpl+i+1)
@@ -163,7 +163,7 @@ func TestRefreshAndGetTrackedCpls(t *testing.T) {
 	}
 
 	// add our peer ID to max out the table
-	added, err := rt.TryAddPeer(local, emptyFeatureList, true, false)
+	added, err := rt.TryAddUnknownPeer(local, true, false)
 	require.NoError(t, err)
 	require.True(t, added)
 
