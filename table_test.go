@@ -785,9 +785,9 @@ func TestThisThingIsRight(t * testing.T){
 	require.True(t, len(rt.buckets) > 0)
 	require.Equal(t, rt.Find(p1), p1)
 	require.Equal(t, rt.Find(p2), peer.ID(""))
+	require.Equal(t, rt.Size(), 1)
 }
 
-/*
 func TestNewPolicy(t * testing.T){
 	features_1 := peer.FeatureList{
 		"/libp2p/barelookup",
@@ -803,9 +803,13 @@ func TestNewPolicy(t * testing.T){
 	rt, err := NewRoutingTable(1, ConvertPeerID(localID), features_1, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
 	require.NoError(t, err)
 
-	// p1, _ := rt.GenRandPeerID(1)
-	// p2, _ := rt.GenRandPeerID(1)
+	p1, _ := rt.GenRandPeerID(1)
+	p2, _ := rt.GenRandPeerID(1)
+	rt.TryAddPeer(p2, features_2, true, false)
+	rt.TryAddPeer(p1, features_1, true, false)
 
-
+	require.True(t, len(rt.buckets) > 0)
+	require.Equal(t, rt.Find(p1), p1)
+	require.Equal(t, rt.Find(p2), peer.ID(""))
+	require.Equal(t, rt.Size(), 1)
 }
-*/

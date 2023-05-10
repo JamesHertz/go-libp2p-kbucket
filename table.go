@@ -235,11 +235,13 @@ func (rt *RoutingTable) addPeer(p peer.ID, features peer.FeatureList ,queryPeer 
 		return p1.replaceable || !p2.replaceable && rt.rtScore(p1.Features) < rt.rtScore(p2.Features)
 	})
 
-	// fmt.Println("repaceable: ", replaceablePeer.replaceable)
 	if replaceablePeer != nil && ( replaceablePeer.replaceable  ||
 		rt.closerThan(features, replaceablePeer.Features)){
 		// let's evict it and add the new peer
 		if rt.removePeer(replaceablePeer.Id) {
+			// TODO: make pull request for this
+			bucketID = rt.bucketIdForPeer(p)
+			bucket   = rt.buckets[bucketID]
 			bucket.pushFront(&PeerInfo{
 				Id:                            p,
 				Features:                      features,
@@ -258,6 +260,7 @@ func (rt *RoutingTable) addPeer(p peer.ID, features peer.FeatureList ,queryPeer 
 	if rt.df != nil {
 		rt.df.Remove(p)
 	}
+
 	return false, ErrPeerRejectedNoCapacity
 }
 
