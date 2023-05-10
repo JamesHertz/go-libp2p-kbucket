@@ -799,17 +799,29 @@ func TestNewPolicy(t * testing.T){
 		"/chat/getvalue",
 	};
 
+	features_3 := peer.FeatureList{
+		"/libp2p/barelookup",
+	};
+
 	localID := test.RandPeerIDFatal(t)
-	rt, err := NewRoutingTable(1, ConvertPeerID(localID), features_1, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
+	rt, err := NewRoutingTable(10, ConvertPeerID(localID), features_1, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
 	require.NoError(t, err)
 
-	p1, _ := rt.GenRandPeerID(1)
-	p2, _ := rt.GenRandPeerID(1)
-	rt.TryAddPeer(p2, features_2, true, false)
-	rt.TryAddPeer(p1, features_1, true, false)
+	for rt.Size() < 5 {
+		pid, _ := rt.GenRandPeerID(0)
+		rt.TryAddPeer(pid, features_2, true, false)
+	}
 
-	require.True(t, len(rt.buckets) > 0)
-	require.Equal(t, rt.Find(p1), p1)
-	require.Equal(t, rt.Find(p2), peer.ID(""))
-	require.Equal(t, rt.Size(), 1)
+	for rt.Size() < 10 {
+		pid, _ := rt.GenRandPeerID(0)
+		rt.TryAddPeer(pid, features_3, true, false)
+	}
+
+	for i := 0 ; i < 5 ; i++{
+		pid, _ := rt.GenRandPeerID(0)
+		rt.TryAddPeer(pid, features_1, true, false)
+		require.Equal(t, rt.Find(pid), pid)
+	}
+
+	require.Equal(t, rt.Size(), 10)
 }
