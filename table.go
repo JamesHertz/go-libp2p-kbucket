@@ -389,7 +389,7 @@ func (rt *RoutingTable) Find(id peer.ID) peer.ID {
 }
 
 // NearestPeer returns a single peer that is nearest to the given ID
-func (rt *RoutingTable) NearestPeer(id ID) peer.ID {
+func (rt *RoutingTable) NearestPeer(id ID) peer.ID { // TODO: look at this :)
 	peers := rt.NearestPeers(id, 1)
 	if len(peers) > 0 {
 		return peers[0]

@@ -11,16 +11,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var emptyFeatureList = peer.FeatureList{}
 
 // TODO: think, should I make this function public??
-func newEmptyFeaturesRT(bucketsize int, localID ID,latency time.Duration, m peerstore.Metrics, usefulnessGracePeriod time.Duration,
+func newEmptyFeaturesRT(bucketsize int, localID ID, latency time.Duration, m peerstore.Metrics, usefulnessGracePeriod time.Duration,
 	df *peerdiversity.Filter) (*RoutingTable, error) {
-	return NewRoutingTable(bucketsize, localID, emptyFeatureList, latency, m, usefulnessGracePeriod, df)
+	return NewRoutingTable(bucketsize, localID, nil, latency, m, usefulnessGracePeriod, df)
 }
 
-func (rt *RoutingTable) TryAddUnknownPeer(p peer.ID,queryPeer bool, isReplaceable bool) (bool, error) {
-	return rt.TryAddPeer(p, emptyFeatureList, queryPeer, isReplaceable)
+func (rt *RoutingTable) TryAddUnknownPeer(p peer.ID, queryPeer bool, isReplaceable bool) (bool, error) {
+	return rt.TryAddPeer(p, nil, queryPeer, isReplaceable)
 }
 
 func TestCloser(t *testing.T) {

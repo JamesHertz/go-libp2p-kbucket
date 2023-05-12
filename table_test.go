@@ -40,7 +40,7 @@ func TestBucket(t *testing.T) {
 		//bareInfo := BareInfo{Id: peers[i]}
 		b.pushFront(&PeerInfo{
 			Id:                            peers[i],
-			Features:                      emptyFeatureList,
+			Features:                      nil,
 			LastUsefulAt:                  testTime1,
 			LastSuccessfulOutboundQueryAt: testTime2,
 			AddedAt:                       testTime1,
