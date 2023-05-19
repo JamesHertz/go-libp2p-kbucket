@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p-kbucket/peerdiversity"
-	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
 	"github.com/libp2p/go-libp2p/core/test"
 	"github.com/stretchr/testify/require"
@@ -13,13 +12,9 @@ import (
 
 
 // TODO: think, should I make this function public??
-func newEmptyFeaturesRT(bucketsize int, localID ID, latency time.Duration, m peerstore.Metrics, usefulnessGracePeriod time.Duration,
-	df *peerdiversity.Filter) (*RoutingTable, error) {
-	return NewRoutingTable(bucketsize, localID, nil, latency, m, usefulnessGracePeriod, df)
-}
-
-func (rt *RoutingTable) TryAddUnknownPeer(p peer.ID, queryPeer bool, isReplaceable bool) (bool, error) {
-	return rt.TryAddPeer(p, nil, queryPeer, isReplaceable)
+func newEmptyFeaturesRT(bucketsize int, localID ID, latency time.Duration, m peerstore.Metrics, 
+	usefulnessGracePeriod time.Duration, df *peerdiversity.Filter) (*RoutingTable, error) {
+	return NewRoutingTable(bucketsize, localID, nil, nil, latency, m, usefulnessGracePeriod, df)
 }
 
 func TestCloser(t *testing.T) {

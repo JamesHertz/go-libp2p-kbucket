@@ -27,6 +27,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/multiformats/go-base32 v0.1.0 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
+	github.com/multiformats/go-multiaddr-fmt v0.1.0 // indirect
 	github.com/multiformats/go-multibase v0.1.1 // indirect
 	github.com/multiformats/go-multicodec v0.7.0 // indirect
 	github.com/multiformats/go-multistream v0.4.1 // indirect
@@ -45,4 +46,4 @@ require (
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
 
-replace github.com/libp2p/go-libp2p => ../go-libp2p/
+replace github.com/libp2p/go-libp2p v0.22.0 => github.com/JamesHertz/go-libp2p v0.27.0-jhertz

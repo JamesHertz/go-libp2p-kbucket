@@ -30,13 +30,15 @@ type RoutingTable struct {
 
 	// TODO: refactor this everywhere :)
 	local ID
-	features peer.FeatureList
+	localFeatures peer.FeatureList
 
 	// Blanket lock, refine later for better performance
 	tabLock sync.RWMutex
 
 	// latency metrics
 	metrics peerstore.Metrics
+
+	fstore peerstore.FeatureBook
 
 	// Maximum acceptable latency for peers in this cluster
 	maxLatency time.Duration
@@ -60,14 +62,16 @@ type RoutingTable struct {
 	df *peerdiversity.Filter
 }
 
+// TODO: do a config thing for this :)
 // NewRoutingTable creates a new routing table with a given bucketsize, local ID, and latency tolerance.
-func NewRoutingTable(bucketsize int, localID ID, features peer.FeatureList, latency time.Duration, m peerstore.Metrics, usefulnessGracePeriod time.Duration,
-	df *peerdiversity.Filter) (*RoutingTable, error) {
+func NewRoutingTable(bucketsize int, localID ID, localFeatures peer.FeatureList, fstore peerstore.FeatureBook, latency time.Duration, 
+	m peerstore.Metrics, usefulnessGracePeriod time.Duration, df *peerdiversity.Filter) (*RoutingTable, error) {
 	rt := &RoutingTable{
 		buckets:    []*bucket{newBucket()},
 		bucketsize: bucketsize,
 		local:      localID,
-		features:   features, // features list
+		localFeatures: localFeatures,
+		fstore: fstore,
 
 		maxLatency: latency,
 		metrics:    m,
@@ -117,7 +121,7 @@ func (rt *RoutingTable) NPeersForCpl(cpl uint) int {
 // given two festures list fst and snd returns true if the 
 // list fst compared with the routing table one has higher score than snd.
 func (rt * RoutingTable) closerThan(fst peer.FeatureList, snd peer.FeatureList) bool{
-	return fst.FeaturesScore(rt.features) > snd.FeaturesScore(rt.features)
+	return fst.FeaturesScore(rt.localFeatures) > snd.FeaturesScore(rt.localFeatures)
 }
 
 // TryAddPeer tries to add a peer to the Routing table.
@@ -140,9 +144,14 @@ func (rt * RoutingTable) closerThan(fst peer.FeatureList, snd peer.FeatureList) 
 // the boolean value will ALWAYS be false i.e. the peer wont be added to the Routing Table it it's not already there.
 //
 // A return value of false with error=nil indicates that the peer ALREADY exists in the Routing Table.
-func (rt *RoutingTable) TryAddPeer(p peer.ID, features peer.FeatureList,queryPeer bool, isReplaceable bool) (bool, error) {
+func (rt *RoutingTable) TryAddPeer(p peer.ID, queryPeer bool, isReplaceable bool) (bool, error) {
 	rt.tabLock.Lock()
 	defer rt.tabLock.Unlock()
+
+	var features peer.FeatureList = nil
+	if rt.fstore != nil {
+		features = rt.fstore.GetFeatures(p)
+	}
 
 	return rt.addPeer(p, features, queryPeer, isReplaceable)
 }
@@ -538,5 +547,5 @@ func (rt *RoutingTable) maxCommonPrefix() uint {
 }
 
 func (rt * RoutingTable) rtScore(features peer.FeatureList) int {
-	return rt.features.FeaturesScore(features)
+	return rt.localFeatures.FeaturesScore(features)
 }
