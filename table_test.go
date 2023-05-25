@@ -790,7 +790,7 @@ func TestThisThingIsRight(t * testing.T){
 }
 
 func TestNewPolicy(t * testing.T){
-	local :=  peer.ToFeatureSet(
+	local :=  peer.NewFeatureSet(
 		"/libp2p/barelookup",
 		"/chat/putvalue",
 	)
