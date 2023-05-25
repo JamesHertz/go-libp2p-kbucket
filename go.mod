@@ -46,4 +46,5 @@ require (
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
 
-replace github.com/libp2p/go-libp2p v0.22.0 => github.com/JamesHertz/go-libp2p v0.27.0-jhertz
+// replace github.com/libp2p/go-libp2p v0.22.0 => github.com/JamesHertz/go-libp2p v0.27.0-jhertz
+replace github.com/libp2p/go-libp2p => ../go-libp2p

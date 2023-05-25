@@ -21,7 +21,7 @@ type PeerInfo struct {
 	Id peer.ID
 
 	// features list 
-	Features peer.FeatureList
+	Features peer.Features
 
 	// LastUsefulAt is the time instant at which the peer was last "useful" to us.
 	// Please see the DHT docs for the definition of usefulness.

@@ -790,24 +790,25 @@ func TestThisThingIsRight(t * testing.T){
 }
 
 func TestNewPolicy(t * testing.T){
-	features_1 := peer.FeatureList{
+	local :=  peer.ToFeatureSet(
 		"/libp2p/barelookup",
 		"/chat/putvalue",
-	};
+	)
 
-	features_2 := peer.FeatureList{
+	features_1 := local.Features()
+	features_2 := peer.Features{
 		"/libp2p/barelookup",
 		"/chat/getvalue",
 	};
 
-	features_3 := peer.FeatureList{
+	features_3 := peer.Features{
 		"/libp2p/barelookup",
 	};
 
 	fbook := pstoremem.NewFeatureBook()
 
 	localID := test.RandPeerIDFatal(t)
-	rt, err := NewRoutingTable(10, ConvertPeerID(localID), features_1, fbook, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
+	rt, err := NewRoutingTable(10, ConvertPeerID(localID), local, fbook, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
 	require.NoError(t, err)
 
 

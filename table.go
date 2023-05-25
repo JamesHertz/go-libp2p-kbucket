@@ -30,7 +30,7 @@ type RoutingTable struct {
 
 	// TODO: refactor this everywhere :)
 	local ID
-	localFeatures peer.FeatureList
+	localFeatures peer.FeatureSet
 
 	// Blanket lock, refine later for better performance
 	tabLock sync.RWMutex
@@ -64,7 +64,7 @@ type RoutingTable struct {
 
 // TODO: do a config thing for this :)
 // NewRoutingTable creates a new routing table with a given bucketsize, local ID, and latency tolerance.
-func NewRoutingTable(bucketsize int, localID ID, localFeatures peer.FeatureList, fstore peerstore.FeatureBook, latency time.Duration, 
+func NewRoutingTable(bucketsize int, localID ID, localFeatures peer.FeatureSet, fstore peerstore.FeatureBook, latency time.Duration, 
 	m peerstore.Metrics, usefulnessGracePeriod time.Duration, df *peerdiversity.Filter) (*RoutingTable, error) {
 	rt := &RoutingTable{
 		buckets:    []*bucket{newBucket()},
@@ -120,8 +120,8 @@ func (rt *RoutingTable) NPeersForCpl(cpl uint) int {
 
 // given two festures list fst and snd returns true if the 
 // list fst compared with the routing table one has higher score than snd.
-func (rt * RoutingTable) closerThan(fst peer.FeatureList, snd peer.FeatureList) bool{
-	return fst.FeaturesScore(rt.localFeatures) > snd.FeaturesScore(rt.localFeatures)
+func (rt * RoutingTable) closerThan(fst peer.Features, snd peer.Features) bool{
+	return rt.rtScore(fst) > rt.rtScore(snd)
 }
 
 // TryAddPeer tries to add a peer to the Routing table.
@@ -148,9 +148,9 @@ func (rt *RoutingTable) TryAddPeer(p peer.ID, queryPeer bool, isReplaceable bool
 	rt.tabLock.Lock()
 	defer rt.tabLock.Unlock()
 
-	var features peer.FeatureList = nil
+	var features peer.Features = nil
 	if rt.fstore != nil {
-		features = rt.fstore.GetFeatures(p)
+		features = rt.fstore.Features(p)
 	}
 
 	return rt.addPeer(p, features, queryPeer, isReplaceable)
@@ -158,7 +158,7 @@ func (rt *RoutingTable) TryAddPeer(p peer.ID, queryPeer bool, isReplaceable bool
 
 // TODO: Look at this more carefully
 // locking is the responsibility of the caller
-func (rt *RoutingTable) addPeer(p peer.ID, features peer.FeatureList ,queryPeer bool, isReplaceable bool) (bool, error) {
+func (rt *RoutingTable) addPeer(p peer.ID, features peer.Features ,queryPeer bool, isReplaceable bool) (bool, error) {
 
 	// returns the index of the bucket in the bucket list. The 
 	// index is the number of leadings zero's of the XOR(sha256(p), localID))
@@ -546,6 +546,6 @@ func (rt *RoutingTable) maxCommonPrefix() uint {
 	return 0
 }
 
-func (rt * RoutingTable) rtScore(features peer.FeatureList) int {
-	return rt.localFeatures.FeaturesScore(features)
+func (rt * RoutingTable) rtScore(features peer.Features) int {
+	return rt.localFeatures.FeatureScore(features)
 }
