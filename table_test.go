@@ -1,6 +1,7 @@
 package kbucket
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -450,6 +451,24 @@ func TestTryAddPeer(t *testing.T) {
 
 }
 
+func TestReplacePeerWithBucketSize1(t *testing.T) {
+	localID := test.RandPeerIDFatal(t)
+	rt, err := NewRoutingTable(1, ConvertPeerID(localID), peer.NewFeatureSet() , nil, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
+	require.NoError(t, err)
+	p1, _ := rt.GenRandPeerID(1) // for any targetCpl > 0
+	p2, _ := rt.GenRandPeerID(1)
+
+	rt.TryAddPeer(p1, true, true)
+	success, err := rt.TryAddPeer(p2, true, true)
+
+	require.NoError(t, err)
+	require.True(t, success)
+
+	require.Equal(t, peer.ID(""), rt.Find(p1))
+	require.Equal(t, p2, rt.Find(p2))
+	require.Equal(t, rt.Size(), 1)
+}
+
 func TestMarkAllPeersIrreplaceable(t *testing.T) {
 	t.Parallel()
 
@@ -806,6 +825,12 @@ func TestNewPolicy(t * testing.T){
 	};
 
 	fbook := pstoremem.NewFeatureBook()
+
+	for i, fts := range []peer.Features {
+		features_1, features_2, features_3,
+	} {
+		fmt.Printf("features_%d: %v ; score= %d\n", i+1, fts, local.FeatureScore(fts))
+	}
 
 	localID := test.RandPeerIDFatal(t)
 	rt, err := NewRoutingTable(10, ConvertPeerID(localID), local, fbook, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)

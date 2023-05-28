@@ -9,12 +9,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-// type BareInfo struct {
-// 	Id peer.ID
-// 	// features list 
-// 	Features peer.FeatureList
-// }
-
 // PeerInfo holds all related information for a peer in the K-Bucket.
 type PeerInfo struct {
 	//BareInfo
