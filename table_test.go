@@ -1,7 +1,6 @@
 package kbucket
 
 import (
-	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -824,14 +823,7 @@ func TestNewPolicy(t * testing.T){
 		"/libp2p/barelookup",
 	};
 
-	fbook := pstoremem.NewFeatureBook()
-
-	for i, fts := range []peer.Features {
-		features_1, features_2, features_3,
-	} {
-		fmt.Printf("features_%d: %v ; score= %d\n", i+1, fts, local.FeatureScore(fts))
-	}
-
+	fbook   := pstoremem.NewFeatureBook()
 	localID := test.RandPeerIDFatal(t)
 	rt, err := NewRoutingTable(10, ConvertPeerID(localID), local, fbook, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
 	require.NoError(t, err)

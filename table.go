@@ -121,7 +121,7 @@ func (rt *RoutingTable) NPeersForCpl(cpl uint) int {
 // given two festures list fst and snd returns true if the 
 // list fst compared with the routing table one has higher score than snd.
 func (rt * RoutingTable) closerThan(fst peer.Features, snd peer.Features) bool{
-	return rt.rtScore(fst) > rt.rtScore(snd)
+	return rt.localFeatures.FeatureScore(fst) > rt.localFeatures.FeatureScore(snd)
 }
 
 // TryAddPeer tries to add a peer to the Routing table.
@@ -151,7 +151,7 @@ func (rt *RoutingTable) TryAddPeer(p peer.ID, queryPeer bool, isReplaceable bool
 	var features peer.Features = nil
 	if rt.fstore != nil {
 		features = rt.fstore.Features(p)
-	}
+	} 
 
 	return rt.addPeer(p, features, queryPeer, isReplaceable)
 }
@@ -241,10 +241,12 @@ func (rt *RoutingTable) addPeer(p peer.ID, features peer.Features ,queryPeer boo
 	replaceablePeer := bucket.min(func(p1 *PeerInfo, p2 *PeerInfo) bool { // what does this really mean?
 		// prefer those that are replaceable, but when there are none
 		// the the one with the lowest featuresScore
-		return p1.replaceable || !p2.replaceable && rt.rtScore(p1.Features) < rt.rtScore(p2.Features)
+		return p1.replaceable || !p2.replaceable && rt.closerThan(p2.Features, p1.Features)
 	})
 
-	if replaceablePeer != nil && replaceablePeer.replaceable {
+//	if replaceablePeer != nil && replaceablePeer.replaceable {
+	if replaceablePeer != nil && ( replaceablePeer.replaceable  ||
+		 rt.closerThan(features, replaceablePeer.Features)) {
 		// we found a replaceable peer, let's replace it with the new peer.
 
 		// add new peer to the bucket. needs to happen before we remove the replaceable peer
@@ -545,8 +547,4 @@ func (rt *RoutingTable) maxCommonPrefix() uint {
 		}
 	}
 	return 0
-}
-
-func (rt * RoutingTable) rtScore(features peer.Features) int {
-	return rt.localFeatures.FeatureScore(features)
 }
