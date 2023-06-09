@@ -412,7 +412,7 @@ func (rt *RoutingTable) NearestPeer(id ID) peer.ID { // TODO: look at this :)
 }
 
 // NearestPeers returns a list of the 'count' closest peers to the given ID
-func (rt *RoutingTable) NearestPeers(id ID, count int) []peer.ID {
+func (rt *RoutingTable) NearestPeers(id ID, count int, fts ...peer.Feature) []peer.ID {
 	// This is the number of bits _we_ share with the key. All peers in this
 	// bucket share cpl bits with us and will therefore share at least cpl+1
 	// bits with the given key. +1 because both the target and all peers in
@@ -508,13 +508,13 @@ func (rt *RoutingTable) NearestPeerToPrefix(id ID) peer.ID {
 }
 
 // NearestPeers returns a list of the 'count' closest peers to the given prefix
-func (rt *RoutingTable) NearestPeersToPrefix(prefix ID, count int) []peer.ID {
+func (rt *RoutingTable) NearestPeersToPrefix(prefix ID, count int, fts ...peer.Feature) []peer.ID {
 	prefixLen := len(prefix)
 	cpl := CommonPrefixLen(prefix, rt.local[:prefixLen])
-	return rt.nearestPeers(cpl, prefix, count)
+	return rt.nearestPeers(cpl, prefix, count, fts...)
 }
 
-func (rt *RoutingTable) nearestPeers(cpl int, id ID, count int) []peer.ID {
+func (rt *RoutingTable) nearestPeers(cpl int, id ID, count int, fts ...peer.Feature) []peer.ID {
 	// It's assumed that this also protects the buckets.
 	rt.tabLock.RLock()
 
@@ -526,6 +526,9 @@ func (rt *RoutingTable) nearestPeers(cpl int, id ID, count int) []peer.ID {
 	pds := peerDistanceSorter{
 		peers:  make([]peerDistance, 0, count+rt.bucketsize),
 		target: id,
+		filter: func(p peer.ID) bool {
+			return rt.fstore.HasFeatures(p, fts...)
+		},
 	}
 
 	// Add peers from the target bucket (cpl+1 shared bits).

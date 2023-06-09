@@ -17,6 +17,7 @@ type peerDistance struct {
 type peerDistanceSorter struct {
 	peers  []peerDistance
 	target ID
+	filter func(peer.ID) bool
 }
 
 func (pds *peerDistanceSorter) Len() int { return len(pds.peers) }
