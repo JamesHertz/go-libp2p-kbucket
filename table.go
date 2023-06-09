@@ -528,11 +528,12 @@ func (rt *RoutingTable) nearestPeers(cpl int, id ID, count int, fts ...peer.Feat
 		cpl = len(rt.buckets) - 1
 	}
 
+
 	pds := peerDistanceSorter{
 		peers:  make([]peerDistance, 0, count+rt.bucketsize),
 		target: id,
 		filter: func(p peer.ID) bool {
-			return rt.fstore.HasFeatures(p, fts...)
+			return rt.fstore == nil || rt.fstore.HasFeatures(p, fts...)
 		},
 	}
 
