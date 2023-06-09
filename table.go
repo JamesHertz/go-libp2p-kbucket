@@ -401,8 +401,8 @@ func (rt *RoutingTable) Find(id peer.ID) peer.ID {
 }
 
 // NearestPeer returns a single peer that is nearest to the given ID
-func (rt *RoutingTable) NearestPeer(id ID) peer.ID { // TODO: look at this :)
-	peers := rt.NearestPeers(id, 1)
+func (rt *RoutingTable) NearestPeer(id ID, fts ...peer.Feature) peer.ID { // TODO: look at this :)
+	peers := rt.NearestPeers(id, 1, fts...)
 	if len(peers) > 0 {
 		return peers[0]
 	}
@@ -420,7 +420,7 @@ func (rt *RoutingTable) NearestPeers(id ID, count int, fts ...peer.Feature) []pe
 	cpl := CommonPrefixLen(id, rt.local)
 
 	// changes done because of double-hashing :)
-	return rt.nearestPeers(cpl, id, count)
+	return rt.nearestPeers(cpl, id, count, fts...)
 }
 
 // Size returns the total number of peers in the routing table
@@ -455,8 +455,9 @@ func (rt *RoutingTable) Print() {
 		fmt.Printf("\tbucket: %d\n", i)
 
 		for e := b.list.Front(); e != nil; e = e.Next() {
-			p := e.Value.(*PeerInfo).Id
-			fmt.Printf("\t\t- %s %s\n", p.String(), rt.metrics.LatencyEWMA(p).String())
+			pi := e.Value.(*PeerInfo)
+			pid := pi.Id
+			fmt.Printf("\t\t- %s %s (features: %v)\n", pid.String(), rt.metrics.LatencyEWMA(pid).String(), pi.Features)
 		}
 	}
 	rt.tabLock.RUnlock()
@@ -515,6 +516,10 @@ func (rt *RoutingTable) NearestPeersToPrefix(prefix ID, count int, fts ...peer.F
 }
 
 func (rt *RoutingTable) nearestPeers(cpl int, id ID, count int, fts ...peer.Feature) []peer.ID {
+	if rt.fstore == nil && len(fts) > 0 {
+		panic("Cannot search for peers with features when no FeatureBook provided")
+	}
+
 	// It's assumed that this also protects the buckets.
 	rt.tabLock.RLock()
 

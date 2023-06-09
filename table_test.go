@@ -920,3 +920,94 @@ func TestTable_NearestPeersToPrefix(t *testing.T) {
 		require.Contains(t, resPeers, expected)
 	}
 }
+
+func TestClosestPeersToFeature(t* testing.T){
+	const bucketSize = 10
+	featuresByCpl := []peer.Features{
+		{"d"}, {"a"}, {"b"}, {"c"}, {"a", "b"}, {"a", "b", "c"},
+	}
+
+	fts := peer.Features{ "a", "b", "c", "d" }
+	local := test.RandPeerIDFatal(t)
+	pbook, err := pstoremem.NewPeerstore()
+	require.Nil(t, err)
+
+	localID := ConvertPeerID(local)
+	rt, err := NewRoutingTable(bucketSize, localID, peer.NewFeatureSet(fts...), pbook, time.Hour, pstore.NewMetrics(), NoOpThreshold, nil)
+	require.Nil(t, err)
+
+	// fill all the RT
+	for cpl := uint(0) ; cpl < uint( len(featuresByCpl) ); cpl++{
+		for i := 0; i < rt.bucketsize; i++ {
+			pid, err := rt.GenRandPeerID(cpl)
+			fts := featuresByCpl[cpl]
+			require.Nil(t, err)
+			pbook.SetFeatures(pid, fts...)
+			require.NotNil(t, pbook.Features(pid))
+
+			added, err := rt.TryAddPeer(pid, true, false)
+
+
+			require.NoError(t, err)
+			require.True(t, added, "Peer should be added to the rt.")
+		}
+	}
+
+	// rt.Print()
+	require.Equal(t, len(featuresByCpl) * rt.bucketsize, rt.Size())
+
+	key, err := rt.GenRandomKey(3)
+	require.Nil(t, err)
+
+	pid := rt.NearestPeer(key, "whatever")
+	require.Equal(t, pid, peer.ID(""))
+
+	type cpl_fts struct {
+		cpl int
+		fts peer.Features
+		expected peer.Features
+	}
+
+	for _, pair := range []cpl_fts {
+
+		// we can go foward
+		{cpl: 0, fts: featuresByCpl[0]},
+		{cpl: 0, fts: featuresByCpl[1]},
+		{cpl: 0, fts: featuresByCpl[2]},
+		{cpl: 0, fts: featuresByCpl[3]},
+		{cpl: 0, fts: featuresByCpl[4]},
+		{cpl: 0, fts: featuresByCpl[5]},
+
+		// we can come back
+		{cpl: 3, fts: featuresByCpl[0]}, 
+
+		// we are getting the closest
+		{cpl: 10, fts: featuresByCpl[1], expected: featuresByCpl[5]},
+		{cpl: 10, fts: featuresByCpl[2], expected: featuresByCpl[5]},
+		{cpl: 10, fts: featuresByCpl[3], expected: featuresByCpl[5]},
+		{cpl: 10, fts: featuresByCpl[4], expected: featuresByCpl[5]},
+		{cpl: 10, fts: featuresByCpl[5], expected: featuresByCpl[5]},
+
+		// we are getting the closest
+		{cpl: 2, fts: featuresByCpl[1], expected: featuresByCpl[4]},
+		{cpl: 3, fts: featuresByCpl[2], expected: featuresByCpl[4]},
+	} {
+	    key, err := rt.GenRandomKey(uint(pair.cpl))
+	    require.Nil(t, err)
+
+	    peers := rt.NearestPeers(key, rt.bucketsize, pair.fts...)
+	    require.Equal(t, rt.bucketsize, len(peers))
+
+		exp := pair.expected
+		if exp == nil {
+			exp = pair.fts
+		}
+
+		// check that the peer has actually the features 
+		for _, p := range peers {
+			require.True(t, rt.fstore.HasFeatures(p, exp...), "cpl: %d ; fts: %v, exp: %v", pair.cpl, pair.fts, exp)
+		}
+	}
+
+	// specific test :) isItReally getting the closest??
+}
