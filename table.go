@@ -528,14 +528,12 @@ func (rt *RoutingTable) nearestPeers(cpl int, id ID, count int, fts ...peer.Feat
 		cpl = len(rt.buckets) - 1
 	}
 
-
 	pds := peerDistanceSorter{
 		peers:  make([]peerDistance, 0, count+rt.bucketsize),
 		target: id,
-		filter: func(p peer.ID) bool {
-			return rt.fstore == nil || rt.fstore.HasFeatures(p, fts...)
-		},
+		filter: newFeauresFilter(fts),
 	}
+
 
 	// Add peers from the target bucket (cpl+1 shared bits).
 	pds.appendPeersFromList(rt.buckets[cpl].list)
@@ -580,4 +578,30 @@ func (rt *RoutingTable) nearestPeers(cpl int, id ID, count int, fts ...peer.Feat
 	}
 
 	return out
+}
+
+// started using things because of issue got earlier :)
+func newFeauresFilter(fts peer.Features) distSorterFilter{
+	if len(fts) == 0 {
+		return func(pi PeerInfo) bool {
+			return true
+		}
+	}
+
+	aux := make(map[peer.Feature]struct{}, fts.Size())
+	for _, ft := range fts {
+		aux[ft] = struct{}{}
+	}
+
+	return func(pi PeerInfo) bool {
+		count := 0
+		for _, ft := range pi.Features{
+			_, ok := aux[ft]
+			if ok {
+				count += 1
+			}
+		}
+		return count == len(aux)
+	}
+
 }

@@ -13,12 +13,15 @@ type peerDistance struct {
 	distance ID
 }
 
+type distSorterFilter func(PeerInfo) bool
+
 // peerDistanceSorter implements sort.Interface to sort peers by xor distance
 type peerDistanceSorter struct {
 	peers  []peerDistance
 	target ID
-	filter func(peer.ID) bool
+	filter distSorterFilter
 }
+
 
 func (pds *peerDistanceSorter) Len() int { return len(pds.peers) }
 func (pds *peerDistanceSorter) Swap(a, b int) {
@@ -40,7 +43,7 @@ func (pds *peerDistanceSorter) appendPeer(p peer.ID, pDhtId ID) {
 func (pds *peerDistanceSorter) appendPeersFromList(l *list.List) {
 	for e := l.Front(); e != nil; e = e.Next() {
 		pinfo := e.Value.(*PeerInfo)
-		if pds.filter == nil || pds.filter(pinfo.Id) {
+		if pds.filter == nil || pds.filter(*pinfo) {
 			pds.appendPeer(pinfo.Id, pinfo.dhtId)
 		}
 	}
