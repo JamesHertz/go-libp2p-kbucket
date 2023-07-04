@@ -177,6 +177,7 @@ func (rt *RoutingTable) addPeer(p peer.ID, features peer.Features ,queryPeer boo
 		// usefulness bump. This will ONLY happen once.
 		if peerInfo.LastUsefulAt.IsZero() && queryPeer {
 			peerInfo.LastUsefulAt = lastUsefulAt
+			peerInfo.Features = rt.fstore.Features(peerInfo.Id)
 		}
 		return false, nil
 	}
@@ -240,11 +241,10 @@ func (rt *RoutingTable) addPeer(p peer.ID, features peer.Features ,queryPeer boo
 	// as long as it's a replaceable peer.
 	replaceablePeer := bucket.min(func(p1 *PeerInfo, p2 *PeerInfo) bool { // what does this really mean?
 		// prefer those that are replaceable, but when there are none
-		// the the one with the lowest featuresScore
+		// the the one with the highest featuresScore
 		return p1.replaceable || !p2.replaceable && rt.closerThan(p2.Features, p1.Features)
 	})
 
-//	if replaceablePeer != nil && replaceablePeer.replaceable {
 	if replaceablePeer != nil && ( replaceablePeer.replaceable  ||
 		 rt.closerThan(features, replaceablePeer.Features)) {
 		// we found a replaceable peer, let's replace it with the new peer.
